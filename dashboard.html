@@ -54,6 +54,14 @@
         #notification-box.show {
             opacity: 1;
         }
+        @media print {
+            body > *:not(#print-area) {
+                display: none !important;
+            }
+            #print-area {
+                display: block !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -351,7 +359,8 @@
                             <tr>
                                 <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">اسم الموزع</th>
                                 <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">المبلغ</th>
-                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">التاريخ</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">التاريخ</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody id="payments-list">
@@ -454,6 +463,8 @@
     </div>
     
     <div id="notification-box"></div>
+
+    <div id="print-area" style="display: none; padding: 20px; font-family: 'Tajawal', sans-serif;"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -863,12 +874,29 @@
                             <td class="py-2 px-4">${data.distributorName}</td>
                             <td class="py-2 px-4">$${data.amount.toFixed(2)}</td>
                             <td class="py-2 px-4">${date}</td>
+                            <td class="py-2 px-4">
+                                <button class="delete-payment-button text-red-600 hover:text-red-800 font-bold" data-id="${doc.id}">حذف</button>
+                            </td>
                         </tr>
                     `;
                     paymentsList.innerHTML += row;
                 });
                 totalIncome = currentTotalIncome;
                 renderDashboard();
+            });
+
+            paymentsList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-payment-button')) {
+                    const paymentId = e.target.dataset.id;
+                    try {
+                        const docRef = doc(paymentsCollectionRef, paymentId);
+                        await deleteDoc(docRef);
+                        showNotification("تم حذف الدفعة بنجاح!", "success");
+                    } catch (e) {
+                        console.error("Error deleting payment: ", e);
+                        showNotification("فشل حذف الدفعة. حاول مرة أخرى.", "error");
+                    }
+                }
             });
 
             const employeesCollectionPath = `/artifacts/${appId}/users/${userId}/employees`;
@@ -1129,6 +1157,59 @@
                     messageBox.textContent = '';
                 }, 3000);
             }
+            
+            async function printInvoice(docId) {
+                try {
+                    const docRef = doc(invoicesCol, docId);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const cardDetails = data.cards.map(card => `${card.count} كرت ${card.type}`).join(', ');
+                        const date = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString("ar-EG") : "غير معروف";
+
+                        const printContent = `
+                            <div style="text-align: right; direction: rtl; font-family: 'Tajawal', sans-serif;">
+                                <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">فاتورة رقم: ${docSnap.id.substring(0, 8)}</h1>
+                                <p style="font-size: 16px;"><strong>تاريخ الفاتورة:</strong> ${date}</p>
+                                <p style="font-size: 16px;"><strong>اسم الموزع:</strong> ${data.distributorName}</p>
+                                <hr style="margin: 20px 0;">
+                                <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">تفاصيل الكروت</h2>
+                                <p style="font-size: 16px;">${cardDetails}</p>
+                                <hr style="margin: 20px 0;">
+                                <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">الملخص المالي</h2>
+                                <p style="font-size: 16px;"><strong>القيمة الإجمالية للكروت:</strong> ${data.totalValue.toFixed(2)} دينار</p>
+                                <p style="font-size: 16px;"><strong>المبلغ المستلم نقداً:</strong> ${data.cashReceived.toFixed(2)} دينار</p>
+                                <p style="font-size: 16px;"><strong>المبلغ المتبقي:</strong> ${data.remainingBalance.toFixed(2)} دينار</p>
+                            </div>
+                        `;
+
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
+                            <html>
+                            <head>
+                                <title>طباعة الفاتورة</title>
+                                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+                                <style>
+                                    body { font-family: 'Tajawal', sans-serif; }
+                                </style>
+                            </head>
+                            <body>
+                                ${printContent}
+                            </body>
+                            </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                    } else {
+                        console.error("No such invoice document!");
+                        showNotification("الفاتورة غير موجودة. حاول مرة أخرى.", "error");
+                    }
+                } catch (error) {
+                    console.error("Error printing invoice:", error);
+                    showNotification("فشل طباعة الفاتورة. حاول مرة أخرى.", "error");
+                }
+            }
 
             onSnapshot(query(invoicesCol), (snapshot) => {
                 invoicesListEl.innerHTML = '';
@@ -1150,9 +1231,30 @@
                         <p class="text-gray-600"><strong>الكروت المستلمة:</strong> ${cardDetails}</p>
                         <p class="text-gray-600"><strong>المبلغ المستلم نقداً:</strong> ${data.cashReceived.toFixed(2)} دينار</p>
                         <p class="text-gray-600"><strong>المبلغ المتبقي:</strong> ${data.remainingBalance.toFixed(2)} دينار</p>
+                        <div class="mt-4 flex gap-2 justify-end">
+                            <button class="print-invoice-button bg-blue-500 text-white p-2 rounded-md font-semibold text-sm hover:bg-blue-600 transition-colors duration-200" data-id="${doc.id}">طباعة</button>
+                            <button class="delete-invoice-button bg-red-500 text-white p-2 rounded-md font-semibold text-sm hover:bg-red-600 transition-colors duration-200" data-id="${doc.id}">حذف</button>
+                        </div>
                     `;
                     invoicesListEl.appendChild(invoiceItem);
                 });
+            });
+            
+            invoicesListEl.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-invoice-button')) {
+                    const invoiceId = e.target.dataset.id;
+                    try {
+                        const docRef = doc(invoicesCol, invoiceId);
+                        await deleteDoc(docRef);
+                        showNotification("تم حذف الفاتورة بنجاح!", "success");
+                    } catch (e) {
+                        console.error("Error deleting invoice: ", e);
+                        showNotification("فشل حذف الفاتورة. حاول مرة أخرى.", "error");
+                    }
+                } else if (e.target.classList.contains('print-invoice-button')) {
+                    const invoiceId = e.target.dataset.id;
+                    printInvoice(invoiceId);
+                }
             });
 
             // Account Management Logic
