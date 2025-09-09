@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - نظام إدارة شبكة النور</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+        }
+        .page-content {
+            display: none;
+        }
+        .page-content.active {
+            display: block;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+        }
+        #notification-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+        #notification-box.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="main-app" class="page-content min-h-screen flex flex-col md:flex-row">
+        <aside class="w-full md:w-64 bg-gray-800 text-white p-6 md:min-h-screen">
+            <h2 class="text-2xl font-bold mb-6 text-center">لوحة التحكم</h2>
+            <nav>
+                <ul>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="dashboard-page">
+                            لوحة البيانات
+                        </button>
+                    </li>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="inventory-page">
+                            إدارة المخزون
+                        </button>
+                    </li>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="distributors-page">
+                            إدارة الموزعين
+                        </button>
+                    </li>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="employees-page">
+                            إدارة الموظفين والرواتب
+                        </button>
+                    </li>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="expenses-page">
+                            إدارة المصاريف
+                        </button>
+                    </li>
+                    <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="payments-page">
+                            سجل الدفعات
+                        </button>
+                    </li>
+                     <li class="mb-2">
+                        <button class="nav-button w-full text-right p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200" data-page="account-management-page">
+                            إدارة الحساب
+                        </button>
+                    </li>
+                    <li class="mb-2 mt-auto pt-6">
+                        <button id="logout-button" class="w-full text-right p-3 rounded-lg bg-red-600 hover:bg-red-700 transition-colors duration-200">
+                            تسجيل الخروج
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="mt-auto pt-6 text-sm text-center text-gray-400">
+                <span id="user-id-display"></span>
+            </div>
+        </aside>
+
+        <div class="flex-1 p-6 md:p-10">
+            <section id="dashboard-page" class="page-content active">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-blue-600">لوحة البيانات</h1>
+                    <button id="copy-all-button" class="bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                        نسخ كل البيانات
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                        <h2 class="text-xl font-semibold text-gray-600">إجمالي الدخل</h2>
+                        <p id="total-income" class="mt-2 text-4xl font-bold text-green-600">--</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                        <h2 class="text-xl font-semibold text-gray-600">إجمالي المصاريف</h2>
+                        <p id="total-expenses" class="mt-2 text-4xl font-bold text-red-600">--</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                        <h2 class="text-xl font-semibold text-gray-600">الكروت المتبقية</h2>
+                        <p id="total-inventory" class="mt-2 text-4xl font-bold text-blue-600">--</p>
+                    </div>
+                </div>
+
+                <div class="mt-10">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-700">تفاصيل المخزون</h2>
+                    <div id="detailed-inventory-dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        </div>
+                </div>
+            </section>
+
+            <section id="inventory-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">إدارة المخزون</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">إضافة كروت جديدة</h2>
+                    <form id="add-card-form" class="space-y-4">
+                        <div>
+                            <label for="card-type" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
+                            <select id="card-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                                <option value="10 دينار">10 دينار</option>
+                                <option value="50 دينار">50 دينار</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="card-count" class="block text-sm font-medium text-gray-700">العدد</label>
+                            <input type="number" id="card-count" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="1" value="1">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            إضافة إلى المخزون
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">المخزون الحالي</h2>
+                    <table id="inventory-table" class="min-w-full bg-white rounded-xl shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">نوع الكرت</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">العدد</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-list">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="distributors-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">إدارة الموزعين</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">إضافة موزع جديد</h2>
+                    <form id="add-distributor-form" class="space-y-4">
+                        <div>
+                            <label for="distributor-name" class="block text-sm font-medium text-gray-700">اسم الموزع</label>
+                            <input type="text" id="distributor-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" placeholder="مثال: أحمد للتوزيع">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            إضافة موزع
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">قائمة الموزعين</h2>
+                    <table id="distributors-table" class="min-w-full bg-white rounded-xl shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">اسم الموزع</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">الكروت الموزعة</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="distributors-list">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-xl mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">نظام فواتير الموزعين</h2>
+                    
+                    <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-8">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">إنشاء فاتورة جديدة</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="col-span-1">
+                                <label for="invoiceDistributorName" class="block text-sm font-medium text-gray-700">اسم الموزع</label>
+                                <input type="text" id="invoiceDistributorName" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                            </div>
+                            <div class="col-span-1">
+                                <label for="invoiceCashReceived" class="block text-sm font-medium text-gray-700">المبلغ المستلم نقداً</label>
+                                <input type="number" id="invoiceCashReceived" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="0">
+                            </div>
+                        </div>
+
+                        <div id="invoiceCardsContainer" class="mt-6 space-y-4">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">تفاصيل الكروت</h4>
+                            </div>
+                        
+                        <button id="addInvoiceCardBtn" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md">
+                            + إضافة نوع كرت
+                        </button>
+
+                        <div id="invoiceSummary" class="mt-8 bg-indigo-50 p-6 rounded-lg border border-indigo-200">
+                            <h4 class="text-lg font-semibold text-indigo-800 mb-4">ملخص الفاتورة</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="bg-indigo-100 p-4 rounded-lg shadow-inner">
+                                    <p class="text-sm text-indigo-700">القيمة الإجمالية للكروت:</p>
+                                    <p id="invoiceTotalCardValue" class="text-lg font-bold text-indigo-900">0.00</p>
+                                </div>
+                                <div class="bg-indigo-100 p-4 rounded-lg shadow-inner">
+                                    <p class="text-sm text-indigo-700">المبلغ المستلم:</p>
+                                    <p id="invoiceReceivedAmount" class="text-lg font-bold text-indigo-900">0.00</p>
+                                </div>
+                                <div class="bg-indigo-100 p-4 rounded-lg shadow-inner">
+                                    <p class="text-sm text-indigo-700">المبلغ المتبقي:</p>
+                                    <p id="invoiceRemainingBalance" class="text-lg font-bold text-indigo-900">0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="saveInvoiceBtn" class="mt-6 w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition duration-300 shadow-lg">
+                            حفظ الفاتورة
+                        </button>
+                        <div id="invoiceMessageBox" class="mt-4 text-center text-sm font-medium text-red-600"></div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-xl">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">الفواتير المحفوظة</h3>
+                        <ul id="invoicesList" class="space-y-4">
+                            <li class="text-center text-gray-500 p-4">لا توجد فواتير محفوظة بعد.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="employees-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">إدارة الموظفين والرواتب</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">إضافة موظف جديد</h2>
+                    <form id="add-employee-form" class="space-y-4">
+                        <div>
+                            <label for="employee-name" class="block text-sm font-medium text-gray-700">اسم الموظف</label>
+                            <input type="text" id="employee-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" placeholder="مثال: محمد علي">
+                        </div>
+                        <div>
+                            <label for="employee-salary" class="block text-sm font-medium text-gray-700">الراتب الشهري</label>
+                            <input type="number" id="employee-salary" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="0" value="0">
+                        </div>
+                        <div>
+                            <label for="employee-discount" class="block text-sm font-medium text-gray-700">الخصم عند الغياب ($)</label>
+                            <input type="number" id="employee-discount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="0" value="0">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            إضافة موظف
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">قائمة الموظفين</h2>
+                    <table id="employees-table" class="min-w-full bg-white rounded-xl shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">اسم الموظف</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">الراتب الشهري</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">الخصومات</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employees-list">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="expenses-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">إدارة المصاريف</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">إضافة مصروف جديد</h2>
+                    <form id="add-expense-form" class="space-y-4">
+                        <div>
+                            <label for="expense-description" class="block text-sm font-medium text-gray-700">وصف المصروف</label>
+                            <input type="text" id="expense-description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" placeholder="مثال: فاتورة كهرباء المكتب">
+                        </div>
+                        <div>
+                            <label for="expense-amount" class="block text-sm font-medium text-gray-700">المبلغ ($)</label>
+                            <input type="number" id="expense-amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="0" value="0">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            إضافة مصروف
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">قائمة المصاريف</h2>
+                    <table id="expenses-table" class="min-w-full bg-white rounded-xl shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">الوصف</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">المبلغ</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">التاريخ</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenses-list">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section id="payments-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">سجل الدفعات</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">قائمة الدفعات المستلمة</h2>
+                    <table id="payments-table" class="min-w-full bg-white rounded-xl shadow-md">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tr-xl">اسم الموزع</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700">المبلغ</th>
+                                <th class="py-2 px-4 text-right text-sm font-semibold text-gray-700 rounded-tl-xl">التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-list">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="account-management-page" class="page-content">
+                <h1 class="text-3xl font-bold mb-6 text-blue-600">إدارة الحساب</h1>
+                <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
+                    <h2 class="text-xl font-semibold mb-4">تغيير البريد الإلكتروني</h2>
+                    <form id="change-email-form" class="space-y-4">
+                        <div>
+                            <label for="new-email" class="block text-sm font-medium text-gray-700">البريد الإلكتروني الجديد</label>
+                            <input type="email" id="new-email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                        </div>
+                        <div id="email-message" class="text-sm text-center"></div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            تحديث البريد الإلكتروني
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">تغيير كلمة المرور</h2>
+                    <form id="change-password-form" class="space-y-4">
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium text-gray-700">كلمة المرور الجديدة</label>
+                            <input type="password" id="new-password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                        </div>
+                        <div>
+                            <label for="confirm-password" class="block text-sm font-medium text-gray-700">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" id="confirm-password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                        </div>
+                        <div id="password-message" class="text-sm text-center"></div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                            تحديث كلمة المرور
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+        </div>
+    </div>
+    
+    <div id="distribute-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">توزيع كروت</h2>
+            <form id="distribute-cards-form" class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">اسم الموزع</label>
+                    <p id="distributor-name-modal" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+                <div>
+                    <label for="card-type-distribute" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
+                    <select id="card-type-distribute" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                        <option value="10 دينار">10 دينار</option>
+                        <option value="50 دينار">50 دينار</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="card-count-distribute" class="block text-sm font-medium text-gray-700">العدد</label>
+                    <input type="number" id="card-count-distribute" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="1" value="1">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="close-distribute-modal-button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-md font-semibold hover:bg-gray-400 transition-colors duration-200">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">
+                        توزيع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">استلام دفعة</h2>
+            <form id="receive-payment-form" class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">استلام من الموزع</label>
+                    <p id="distributor-name-payment-modal" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+                <div>
+                    <label for="payment-amount" class="block text-sm font-medium text-gray-700">المبلغ ($)</label>
+                    <input type="number" id="payment-amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" min="0" value="0">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="close-payment-modal-button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-md font-semibold hover:bg-gray-400 transition-colors duration-200">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700 transition-colors duration-200">
+                        تسجيل الدفعة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="notification-box"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc, serverTimestamp, runTransaction, addDoc, getDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('debug');
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUuK6XSfUHxoCTeONlJNIowavBk8N2QfQ",
+            authDomain: "tekliyba.firebaseapp.com",
+            projectId: "tekliyba",
+            storageBucket: "tekliyba.firebasestorage.app",
+            messagingSenderId: "1051388660095",
+            appId: "1:1051388660095:web:199b04c17ce8762ab5724a",
+            measurementId: "G-7YPFLV5KBQ"
+        };
+        
+        const appId = firebaseConfig.projectId;
+
+        let db, auth, userId;
+        const mainApp = document.getElementById('main-app');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const notificationBox = document.getElementById('notification-box');
+        
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                console.log("User signed in:", userId);
+                userIdDisplay.textContent = `معرف المستخدم: ${userId}`;
+                setupListeners();
+                setupCopyButton();
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        document.getElementById('logout-button').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                console.log("User signed out successfully.");
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const page = e.target.dataset.page;
+                if (page) {
+                    showPage(page);
+                }
+            });
+        });
+        
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let totalInventory = 0;
+        function renderDashboard() {
+            document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
+            document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
+            document.getElementById('total-inventory').textContent = totalInventory;
+        }
+
+        function showNotification(message, type = 'success') {
+            notificationBox.textContent = message;
+            if (type === 'error') {
+                notificationBox.style.backgroundColor = '#f44336'; // Red
+            } else {
+                notificationBox.style.backgroundColor = '#4CAF50'; // Green
+            }
+            notificationBox.classList.add('show');
+            setTimeout(() => {
+                notificationBox.classList.remove('show');
+            }, 3000);
+        }
+
+        function copyAllData() {
+            const tables = [
+                { title: 'بيانات المخزون', id: 'inventory-table' },
+                { title: 'قائمة الموزعين', id: 'distributors-table' },
+                { title: 'قائمة الموظفين', id: 'employees-table' },
+                { title: 'قائمة المصاريف', id: 'expenses-table' },
+                { title: 'سجل الدفعات', id: 'payments-table' },
+                { title: 'الفواتير المحفوظة', id: 'invoicesList' }
+            ];
+
+            let textToCopy = '';
+
+            tables.forEach(tableInfo => {
+                const table = document.getElementById(tableInfo.id);
+                if (!table) {
+                    return;
+                }
+
+                textToCopy += `\n\n--- ${tableInfo.title} ---\n`;
+                
+                if (table.tagName === 'UL') {
+                    const listItems = Array.from(table.querySelectorAll('li'));
+                    if (listItems.length > 0 && listItems[0].textContent.includes('لا توجد فواتير')) {
+                        textToCopy += listItems[0].textContent.trim() + '\n';
+                    } else {
+                        listItems.forEach(item => {
+                            const distributorName = item.querySelector('h4')?.textContent.replace('فاتورة للموزع: ', '').trim() || '';
+                            const cardDetails = item.querySelector('p:nth-of-type(1)')?.textContent.replace('الكروت المستلمة:', '').trim() || '';
+                            const receivedAmount = item.querySelector('p:nth-of-type(2)')?.textContent.replace('المبلغ المستلم نقداً:', '').trim() || '';
+                            const remainingBalance = item.querySelector('p:nth-of-type(3)')?.textContent.replace('المبلغ المتبقي:', '').trim() || '';
+                            textToCopy += `${distributorName}\t${cardDetails}\t${receivedAmount}\t${remainingBalance}\n`;
+                        });
+                    }
+                } else {
+                    const rows = table.querySelectorAll('tr');
+
+                    const headerRow = rows[0];
+                    if (headerRow) {
+                        const headers = Array.from(headerRow.querySelectorAll('th'));
+                        textToCopy += headers.map(th => th.textContent.trim()).join('\t') + '\n';
+                    }
+                    
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        const rowData = cells.slice(0, -1).map(td => td.textContent.trim()).join('\t');
+                        textToCopy += rowData + '\n';
+                    }
+                }
+            });
+
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy.trim();
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            showNotification("تم نسخ جميع البيانات بنجاح!");
+        }
+
+        function setupCopyButton() {
+            const copyAllButton = document.getElementById('copy-all-button');
+            if (copyAllButton) {
+                copyAllButton.addEventListener('click', copyAllData);
+            }
+        }
+
+        function setupListeners() {
+            if (!userId) {
+                console.error("User ID not available. Cannot set up listeners.");
+                return;
+            }
+
+            const inventoryCollectionPath = `/artifacts/${appId}/users/${userId}/inventory`;
+            const inventoryCollectionRef = collection(db, inventoryCollectionPath);
+            const addCardForm = document.getElementById('add-card-form');
+            const inventoryList = document.getElementById('inventory-list');
+            const detailedInventoryDashboard = document.getElementById('detailed-inventory-dashboard');
+
+            addCardForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cardType = document.getElementById('card-type').value.trim();
+                const cardCount = parseInt(document.getElementById('card-count').value);
+                if (!cardType || isNaN(cardCount) || cardCount <= 0) {
+                    console.error("Invalid input for card.");
+                    return;
+                }
+                
+                try {
+                    const docRef = doc(inventoryCollectionRef, cardType);
+                    await setDoc(docRef, { type: cardType, count: cardCount }, { merge: true });
+                    console.log("Card added/updated successfully");
+                    addCardForm.reset();
+                } catch (e) {
+                    console.error("Error adding card: ", e);
+                }
+            });
+
+            onSnapshot(inventoryCollectionRef, (querySnapshot) => {
+                inventoryList.innerHTML = '';
+                detailedInventoryDashboard.innerHTML = '';
+                let currentTotalInventory = 0;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    currentTotalInventory += data.count;
+
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${data.type}</td>
+                            <td class="py-2 px-4">${data.count}</td>
+                            <td class="py-2 px-4">
+                                <button class="delete-button text-red-600 hover:text-red-800 font-bold" data-id="${data.type}">حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                    inventoryList.innerHTML += row;
+
+                    const card = `
+                        <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                            <h3 class="text-xl font-semibold text-gray-600">${data.type}</h3>
+                            <p class="mt-2 text-4xl font-bold text-blue-600">${data.count}</p>
+                        </div>
+                    `;
+                    detailedInventoryDashboard.innerHTML += card;
+                });
+                totalInventory = currentTotalInventory;
+                renderDashboard();
+            });
+
+            inventoryList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-button')) {
+                    const cardType = e.target.dataset.id;
+                    try {
+                        const docRef = doc(inventoryCollectionRef, cardType);
+                        await deleteDoc(docRef);
+                        console.log("Card deleted successfully");
+                    } catch (e) {
+                        console.error("Error deleting card: ", e);
+                    }
+                }
+            });
+
+            const distributorsCollectionPath = `/artifacts/${appId}/users/${userId}/distributors`;
+            const distributorsCollectionRef = collection(db, distributorsCollectionPath);
+            const addDistributorForm = document.getElementById('add-distributor-form');
+            const distributorsList = document.getElementById('distributors-list');
+            const distributeModal = document.getElementById('distribute-modal');
+            const distributeCardsForm = document.getElementById('distribute-cards-form');
+            const distributorNameModal = document.getElementById('distributor-name-modal');
+            let currentDistributorName = '';
+
+            addDistributorForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const distributorName = document.getElementById('distributor-name').value.trim();
+                if (!distributorName) {
+                    console.error("Distributor name cannot be empty.");
+                    return;
+                }
+                try {
+                    const newDocRef = doc(distributorsCollectionRef, distributorName);
+                    await setDoc(newDocRef, { 
+                        name: distributorName, 
+                        distributedCards: {
+                            '10 دينار': 0,
+                            '50 دينار': 0
+                        }
+                    });
+                    console.log("Distributor added successfully");
+                    addDistributorForm.reset();
+                } catch (e) {
+                    console.error("Error adding distributor: ", e);
+                }
+            });
+
+            onSnapshot(distributorsCollectionRef, (querySnapshot) => {
+                distributorsList.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const distributedCardsString = Object.entries(data.distributedCards)
+                        .map(([type, count]) => `${type}: ${count}`)
+                        .join(', ');
+                    
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${data.name}</td>
+                            <td class="py-2 px-4">${distributedCardsString}</td>
+                            <td class="py-2 px-4 flex gap-2 items-center">
+                                <button class="distribute-button bg-blue-500 text-white p-2 rounded-md font-semibold text-sm hover:bg-blue-600 transition-colors duration-200" data-name="${data.name}">
+                                    توزيع كروت
+                                </button>
+                                <button class="receive-payment-button bg-green-500 text-white p-2 rounded-md font-semibold text-sm hover:bg-green-600 transition-colors duration-200" data-name="${data.name}">
+                                    استلام مبلغ
+                                </button>
+                                <button class="delete-distributor-button text-red-600 hover:text-red-800 font-bold" data-id="${data.name}">حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                    distributorsList.innerHTML += row;
+                });
+            });
+
+            distributorsList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-distributor-button')) {
+                    const distributorName = e.target.dataset.id;
+                    try {
+                        const docRef = doc(distributorsCollectionRef, distributorName);
+                        deleteDoc(docRef);
+                        console.log("Distributor deleted successfully");
+                    } catch (e) {
+                        console.error("Error deleting distributor: ", e);
+                    }
+                } else if (e.target.classList.contains('distribute-button')) {
+                    currentDistributorName = e.target.dataset.name;
+                    distributorNameModal.textContent = currentDistributorName;
+                    distributeModal.style.display = 'flex';
+                } else if (e.target.classList.contains('receive-payment-button')) {
+                    currentDistributorName = e.target.dataset.name;
+                    document.getElementById('distributor-name-payment-modal').textContent = currentDistributorName;
+                    document.getElementById('payment-modal').style.display = 'flex';
+                }
+            });
+            
+            document.getElementById('close-distribute-modal-button').addEventListener('click', () => {
+                distributeModal.style.display = 'none';
+            });
+            
+            distributeCardsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cardType = document.getElementById('card-type-distribute').value;
+                const cardCount = parseInt(document.getElementById('card-count-distribute').value);
+                
+                if (!cardType || isNaN(cardCount) || cardCount <= 0) {
+                    console.error("Invalid input for card distribution.");
+                    return;
+                }
+                
+                const inventoryDocRef = doc(inventoryCollectionRef, cardType);
+                const distributorDocRef = doc(distributorsCollectionRef, currentDistributorName);
+
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const inventoryDoc = await transaction.get(inventoryDocRef);
+                        const distributorDoc = await transaction.get(distributorDocRef);
+
+                        if (!inventoryDoc.exists()) {
+                            console.error("Inventory item does not exist!");
+                            throw "Inventory item not found";
+                        }
+                        if (!distributorDoc.exists()) {
+                            console.error("Distributor does not exist!");
+                            throw "Distributor not found";
+                        }
+
+                        const currentInventoryCount = inventoryDoc.data().count;
+                        const currentDistributedCards = distributorDoc.data().distributedCards;
+
+                        if (currentInventoryCount < cardCount) {
+                            console.error("Not enough cards in stock!");
+                            throw "Not enough stock";
+                        }
+
+                        transaction.update(inventoryDocRef, { count: currentInventoryCount - cardCount });
+                        
+                        const newDistributedCount = (currentDistributedCards[cardType] || 0) + cardCount;
+                        transaction.update(distributorDocRef, {
+                            [`distributedCards.${cardType}`]: newDistributedCount
+                        });
+                    });
+                    
+                    console.log("Cards distributed successfully.");
+                    distributeModal.style.display = 'none';
+                    distributeCardsForm.reset();
+                } catch (e) {
+                    console.error("Transaction failed: ", e);
+                }
+            });
+            
+            const paymentsCollectionPath = `/artifacts/${appId}/users/${userId}/payments`;
+            const paymentsCollectionRef = collection(db, paymentsCollectionPath);
+            const receivePaymentForm = document.getElementById('receive-payment-form');
+            const paymentsList = document.getElementById('payments-list');
+
+            document.getElementById('close-payment-modal-button').addEventListener('click', () => {
+                document.getElementById('payment-modal').style.display = 'none';
+            });
+
+            receivePaymentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const paymentAmount = parseFloat(document.getElementById('payment-amount').value);
+                if (isNaN(paymentAmount) || paymentAmount <= 0) {
+                    console.error("Invalid input for payment amount.");
+                    return;
+                }
+                
+                try {
+                    await addDoc(paymentsCollectionRef, {
+                        distributorName: currentDistributorName,
+                        amount: paymentAmount,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Payment recorded successfully.");
+                    document.getElementById('payment-modal').style.display = 'none';
+                    receivePaymentForm.reset();
+                } catch (e) {
+                    console.error("Error recording payment: ", e);
+                }
+            });
+
+            onSnapshot(paymentsCollectionRef, (querySnapshot) => {
+                paymentsList.innerHTML = '';
+                let currentTotalIncome = 0;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    currentTotalIncome += data.amount;
+                    const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString("ar-EG") : "غير معروف";
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${data.distributorName}</td>
+                            <td class="py-2 px-4">$${data.amount.toFixed(2)}</td>
+                            <td class="py-2 px-4">${date}</td>
+                        </tr>
+                    `;
+                    paymentsList.innerHTML += row;
+                });
+                totalIncome = currentTotalIncome;
+                renderDashboard();
+            });
+
+            const employeesCollectionPath = `/artifacts/${appId}/users/${userId}/employees`;
+            const employeesCollectionRef = collection(db, employeesCollectionPath);
+            const addEmployeeForm = document.getElementById('add-employee-form');
+            const employeesList = document.getElementById('employees-list');
+
+            addEmployeeForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const employeeName = document.getElementById('employee-name').value.trim();
+                const employeeSalary = parseFloat(document.getElementById('employee-salary').value);
+                const employeeDiscount = parseFloat(document.getElementById('employee-discount').value);
+
+                if (!employeeName || isNaN(employeeSalary) || employeeSalary < 0 || isNaN(employeeDiscount) || employeeDiscount < 0) {
+                    console.error("Invalid input for employee.");
+                    return;
+                }
+                try {
+                    const newDocRef = doc(employeesCollectionRef, employeeName);
+                    await setDoc(newDocRef, { name: employeeName, salary: employeeSalary, discount: employeeDiscount });
+                    console.log("Employee added successfully");
+                    addEmployeeForm.reset();
+                } catch (e) {
+                    console.error("Error adding employee: ", e);
+                }
+            });
+
+            onSnapshot(employeesCollectionRef, (querySnapshot) => {
+                employeesList.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${data.name}</td>
+                            <td class="py-2 px-4">$${data.salary.toFixed(2)}</td>
+                            <td class="py-2 px-4">$${(data.discount || 0).toFixed(2)}</td>
+                            <td class="py-2 px-4">
+                                <button class="delete-employee-button text-red-600 hover:text-red-800 font-bold" data-id="${data.name}">حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                    employeesList.innerHTML += row;
+                });
+            });
+
+            employeesList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-employee-button')) {
+                    const employeeName = e.target.dataset.id;
+                    try {
+                        const docRef = doc(employeesCollectionRef, employeeName);
+                        await deleteDoc(docRef);
+                        console.log("Employee deleted successfully");
+                    } catch (e) {
+                        console.error("Error deleting employee: ", e);
+                    }
+                }
+            });
+
+            const expensesCollectionPath = `/artifacts/${appId}/users/${userId}/expenses`;
+            const expensesCollectionRef = collection(db, expensesCollectionPath);
+            const addExpenseForm = document.getElementById('add-expense-form');
+            const expensesList = document.getElementById('expenses-list');
+
+            addExpenseForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const expenseDescription = document.getElementById('expense-description').value.trim();
+                const expenseAmount = parseFloat(document.getElementById('expense-amount').value);
+                if (!expenseDescription || isNaN(expenseAmount) || expenseAmount <= 0) {
+                    console.error("Invalid input for expense.");
+                    return;
+                }
+                try {
+                    const newDocRef = doc(expensesCollectionRef);
+                    await setDoc(newDocRef, { 
+                        description: expenseDescription, 
+                        amount: expenseAmount,
+                        date: serverTimestamp()
+                    });
+                    console.log("Expense added successfully");
+                    addExpenseForm.reset();
+                } catch (e) {
+                    console.error("Error adding expense: ", e);
+                }
+            });
+
+            onSnapshot(expensesCollectionRef, (querySnapshot) => {
+                expensesList.innerHTML = '';
+                let currentTotalExpenses = 0;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    currentTotalExpenses += data.amount;
+                    const date = data.date ? new Date(data.date.seconds * 1000).toLocaleDateString("ar-EG") : "غير معروف";
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${data.description}</td>
+                            <td class="py-2 px-4">$${data.amount.toFixed(2)}</td>
+                            <td class="py-2 px-4">${date}</td>
+                            <td class="py-2 px-4">
+                                <button class="delete-expense-button text-red-600 hover:text-red-800 font-bold" data-id="${doc.id}">حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                    expensesList.innerHTML += row;
+                });
+                totalExpenses = currentTotalExpenses;
+                renderDashboard();
+            });
+
+            expensesList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-expense-button')) {
+                    const expenseId = e.target.dataset.id;
+                    try {
+                        const docRef = doc(expensesCollectionPath, expenseId);
+                        await deleteDoc(docRef);
+                        console.log("Expense deleted successfully");
+                    } catch (e) {
+                        console.error("Error deleting expense: ", e);
+                    }
+                }
+            });
+
+            const invoicesCol = collection(db, `artifacts/${appId}/users/${userId}/invoices`);
+
+            const distributorNameInput = document.getElementById('invoiceDistributorName');
+            const cashReceivedInput = document.getElementById('invoiceCashReceived');
+            const cardsContainer = document.getElementById('invoiceCardsContainer');
+            const addCardBtn = document.getElementById('addInvoiceCardBtn');
+            const saveInvoiceBtn = document.getElementById('saveInvoiceBtn');
+            const totalCardValueEl = document.getElementById('invoiceTotalCardValue');
+            const receivedAmountEl = document.getElementById('invoiceReceivedAmount');
+            const remainingBalanceEl = document.getElementById('invoiceRemainingBalance');
+            const invoicesListEl = document.getElementById('invoicesList');
+            const messageBox = document.getElementById('invoiceMessageBox');
+
+            const cardPrices = {
+                '50': 50,
+                '100': 100,
+                '200': 200,
+                '500': 500
+            };
+
+            function addCardRow() {
+                const rowId = `card-row-${Date.now()}`;
+                const cardRow = document.createElement('div');
+                cardRow.className = 'flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200';
+                cardRow.innerHTML = `
+                    <div class="flex-1">
+                        <label for="cardType-${rowId}" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
+                        <select id="cardType-${rowId}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                            ${Object.keys(cardPrices).map(price => `<option value="${price}">${price} دينار</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="cardCount-${rowId}" class="block text-sm font-medium text-gray-700">العدد</label>
+                        <input type="number" id="cardCount-${rowId}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" value="1" min="0">
+                    </div>
+                    <button type="button" class="mt-6 h-fit px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-300 shadow-md remove-card-btn">
+                        حذف
+                    </button>
+                `;
+                cardsContainer.appendChild(cardRow);
+
+                const cardTypeSelect = cardRow.querySelector(`#cardType-${rowId}`);
+                const cardCountInput = cardRow.querySelector(`#cardCount-${rowId}`);
+                const removeBtn = cardRow.querySelector('.remove-card-btn');
+
+                cardTypeSelect.addEventListener('change', updateSummary);
+                cardCountInput.addEventListener('input', updateSummary);
+                removeBtn.addEventListener('click', () => {
+                    cardRow.remove();
+                    updateSummary();
+                });
+            }
+
+            addCardRow();
+
+            addCardBtn.addEventListener('click', addCardRow);
+            cashReceivedInput.addEventListener('input', updateSummary);
+
+            function updateSummary() {
+                let totalValue = 0;
+                const cardRows = cardsContainer.querySelectorAll('.flex-col');
+                const cardsData = [];
+
+                cardRows.forEach(row => {
+                    const type = row.querySelector('select').value;
+                    const count = parseInt(row.querySelector('input').value);
+                    const price = cardPrices[type];
+                    
+                    if (price && count > 0) {
+                        totalValue += price * count;
+                        cardsData.push({ type, count, price });
+                    }
+                });
+
+                const received = parseFloat(cashReceivedInput.value) || 0;
+                const remaining = totalValue - received;
+
+                totalCardValueEl.textContent = `${totalValue.toFixed(2)}`;
+                receivedAmountEl.textContent = `${received.toFixed(2)}`;
+                remainingBalanceEl.textContent = `${remaining.toFixed(2)}`;
+            }
+
+            saveInvoiceBtn.addEventListener('click', async () => {
+                const distributorName = distributorNameInput.value.trim();
+                const totalValue = parseFloat(totalCardValueEl.textContent);
+                const cashReceived = parseFloat(cashReceivedInput.value) || 0;
+                const remainingBalance = totalValue - cashReceived;
+
+                if (!distributorName) {
+                    showMessage('الرجاء إدخال اسم الموزع.', 'red');
+                    return;
+                }
+
+                const cards = [];
+                cardsContainer.querySelectorAll('.flex-col').forEach(row => {
+                    const type = row.querySelector('select').value;
+                    const count = parseInt(row.querySelector('input').value);
+                    if (count > 0) {
+                        cards.push({ type, count });
+                    }
+                });
+                
+                if (cards.length === 0) {
+                     showMessage('الرجاء إضافة كرت واحد على الأقل.', 'red');
+                    return;
+                }
+
+                try {
+                    const newInvoice = {
+                        distributorName,
+                        cards,
+                        totalValue,
+                        cashReceived,
+                        remainingBalance,
+                        createdAt: new Date()
+                    };
+                    await addDoc(invoicesCol, newInvoice);
+                    showMessage('تم حفظ الفاتورة بنجاح!', 'green');
+                    clearForm();
+                } catch (error) {
+                    console.error("Error saving invoice: ", error);
+                    showMessage('حدث خطأ أثناء الحفظ. الرجاء المحاولة مرة أخرى.', 'red');
+                }
+            });
+
+            function clearForm() {
+                distributorNameInput.value = '';
+                cashReceivedInput.value = '0';
+                cardsContainer.innerHTML = '';
+                addCardRow();
+                updateSummary();
+            }
+
+            function showMessage(msg, color) {
+                messageBox.textContent = msg;
+                messageBox.className = `mt-4 text-center text-sm font-medium text-${color}-600`;
+                setTimeout(() => {
+                    messageBox.textContent = '';
+                }, 3000);
+            }
+
+            onSnapshot(query(invoicesCol), (snapshot) => {
+                invoicesListEl.innerHTML = '';
+                if (snapshot.empty) {
+                    invoicesListEl.innerHTML = `<li class="text-center text-gray-500 p-4">لا توجد فواتير محفوظة بعد.</li>`;
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const cardDetails = data.cards.map(card => `${card.count} كرت ${card.type}`).join(', ');
+                    const invoiceItem = document.createElement('li');
+                    invoiceItem.className = 'bg-gray-100 p-4 rounded-lg shadow-sm border border-gray-200';
+                    invoiceItem.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-lg font-bold text-gray-800">فاتورة للموزع: ${data.distributorName}</h4>
+                            <span class="text-sm text-gray-500">${data.createdAt.toDate().toLocaleDateString('ar-SA')}</span>
+                        </div>
+                        <p class="text-gray-600"><strong>الكروت المستلمة:</strong> ${cardDetails}</p>
+                        <p class="text-gray-600"><strong>المبلغ المستلم نقداً:</strong> ${data.cashReceived.toFixed(2)} دينار</p>
+                        <p class="text-gray-600"><strong>المبلغ المتبقي:</strong> ${data.remainingBalance.toFixed(2)} دينار</p>
+                    `;
+                    invoicesListEl.appendChild(invoiceItem);
+                });
+            });
+
+            // Account Management Logic
+            const changeEmailForm = document.getElementById('change-email-form');
+            const newEmailInput = document.getElementById('new-email');
+            const emailMessageDiv = document.getElementById('email-message');
+
+            changeEmailForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = auth.currentUser;
+                const newEmail = newEmailInput.value;
+                emailMessageDiv.textContent = '';
+                
+                if (user) {
+                    try {
+                        await updateEmail(user, newEmail);
+                        emailMessageDiv.textContent = "تم تحديث البريد الإلكتروني بنجاح!";
+                        emailMessageDiv.className = "text-sm text-center text-green-600";
+                        showNotification("تم تحديث البريد الإلكتروني بنجاح!", "success");
+                    } catch (error) {
+                        console.error("Error updating email:", error);
+                        let message = "فشل تحديث البريد الإلكتروني. الرجاء المحاولة مرة أخرى.";
+                        if (error.code === 'auth/requires-recent-login') {
+                            message = "الرجاء تسجيل الخروج ثم تسجيل الدخول مرة أخرى لتحديث البريد الإلكتروني.";
+                        }
+                        emailMessageDiv.textContent = message;
+                        emailMessageDiv.className = "text-sm text-center text-red-600";
+                        showNotification(message, "error");
+                    }
+                }
+            });
+
+            const changePasswordForm = document.getElementById('change-password-form');
+            const newPasswordInput = document.getElementById('new-password');
+            const confirmPasswordInput = document.getElementById('confirm-password');
+            const passwordMessageDiv = document.getElementById('password-message');
+
+            changePasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = auth.currentUser;
+                const newPassword = newPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+                passwordMessageDiv.textContent = '';
+                
+                if (newPassword !== confirmPassword) {
+                    passwordMessageDiv.textContent = "كلمة المرور الجديدة وتأكيدها غير متطابقتين.";
+                    passwordMessageDiv.className = "text-sm text-center text-red-600";
+                    return;
+                }
+
+                if (user) {
+                    try {
+                        await updatePassword(user, newPassword);
+                        passwordMessageDiv.textContent = "تم تحديث كلمة المرور بنجاح!";
+                        passwordMessageDiv.className = "text-sm text-center text-green-600";
+                        showNotification("تم تحديث كلمة المرور بنجاح!", "success");
+                        changePasswordForm.reset();
+                    } catch (error) {
+                        console.error("Error updating password:", error);
+                        let message = "فشل تحديث كلمة المرور. الرجاء المحاولة مرة أخرى.";
+                        if (error.code === 'auth/weak-password') {
+                            message = "كلمة المرور ضعيفة جداً. يجب أن تتكون من 6 أحرف على الأقل.";
+                        } else if (error.code === 'auth/requires-recent-login') {
+                            message = "الرجاء تسجيل الخروج ثم تسجيل الدخول مرة أخرى لتحديث كلمة المرور.";
+                        }
+                        passwordMessageDiv.textContent = message;
+                        passwordMessageDiv.className = "text-sm text-center text-red-600";
+                        showNotification(message, "error");
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
