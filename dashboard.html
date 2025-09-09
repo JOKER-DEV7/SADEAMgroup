@@ -156,8 +156,8 @@
                         <div>
                             <label for="card-type" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
                             <select id="card-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
-                                <option value="10 دينار">10 دينار</option>
-                                <option value="50 دينار">50 دينار</option>
+                                <option value="10 كروت">10 كروت</option>
+                                <option value="50 كروت">50 كروت</option>
                             </select>
                         </div>
                         <div>
@@ -418,8 +418,8 @@
                 <div>
                     <label for="card-type-distribute" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
                     <select id="card-type-distribute" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
-                        <option value="10 دينار">10 دينار</option>
-                        <option value="50 دينار">50 دينار</option>
+                        <option value="10 كروت">10 كروت</option>
+                        <option value="50 كروت">50 كروت</option>
                     </select>
                 </div>
                 <div>
@@ -717,8 +717,8 @@
                     await setDoc(newDocRef, { 
                         name: distributorName, 
                         distributedCards: {
-                            'كروت [10]': 0,
-                            'كروت [50]': 0
+                            '10 كروت': 0,
+                            '50 كروت': 0
                         }
                     });
                     console.log("Distributor added successfully");
@@ -732,14 +732,16 @@
                 distributorsList.innerHTML = '';
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const distributedCardsString = Object.entries(data.distributedCards)
-                        .map(([type, count]) => `${type}: ${count}`)
-                        .join(', ');
+                    
+                    const distributedCardsHtml = Object.entries(data.distributedCards)
+                        .filter(([type, count]) => count > 0)
+                        .map(([type, count]) => `<span><strong>${type}:</strong> ${count}</span>`)
+                        .join('<br>');
                     
                     const row = `
                         <tr class="border-b hover:bg-gray-50">
                             <td class="py-2 px-4">${data.name}</td>
-                            <td class="py-2 px-4">${distributedCardsString}</td>
+                            <td class="py-2 px-4">${distributedCardsHtml}</td>
                             <td class="py-2 px-4 flex gap-2 items-center">
                                 <button class="distribute-button bg-blue-500 text-white p-2 rounded-md font-semibold text-sm hover:bg-blue-600 transition-colors duration-200" data-name="${data.name}">
                                     توزيع كروت
@@ -787,6 +789,7 @@
                 
                 if (!cardType || isNaN(cardCount) || cardCount <= 0) {
                     console.error("Invalid input for card distribution.");
+                    showNotification("الرجاء إدخال عدد صحيح وموجب للكروت.", "error");
                     return;
                 }
                 
@@ -794,14 +797,15 @@
                 const distributorDocRef = doc(distributorsCollectionRef, currentDistributorName);
 
                 try {
+                    const inventoryDoc = await getDoc(inventoryDocRef);
+                    if (!inventoryDoc.exists()) {
+                        showNotification("نوع الكرت غير موجود في المخزون. الرجاء إضافة الكرت أولاً.", "error");
+                        return;
+                    }
+
                     await runTransaction(db, async (transaction) => {
-                        const inventoryDoc = await transaction.get(inventoryDocRef);
                         const distributorDoc = await transaction.get(distributorDocRef);
 
-                        if (!inventoryDoc.exists()) {
-                            console.error("Inventory item does not exist!");
-                            throw "Inventory item not found";
-                        }
                         if (!distributorDoc.exists()) {
                             console.error("Distributor does not exist!");
                             throw "Distributor not found";
@@ -823,11 +827,12 @@
                         });
                     });
                     
-                    console.log("Cards distributed successfully.");
+                    showNotification("تم توزيع الكروت بنجاح!", "success");
                     distributeModal.style.display = 'none';
                     distributeCardsForm.reset();
                 } catch (e) {
                     console.error("Transaction failed: ", e);
+                    showNotification("فشل عملية التوزيع. حاول مرة أخرى.", "error");
                 }
             });
             
@@ -1045,7 +1050,7 @@
                     <div class="flex-1">
                         <label for="cardType-${rowId}" class="block text-sm font-medium text-gray-700">نوع الكرت</label>
                         <select id="cardType-${rowId}" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
-                            ${Object.keys(cardPrices).map(price => `<option value="${price}">${price} دينار</option>`).join('')}
+                            ${Object.keys(cardPrices).map(price => `<option value="${price}">${price} كروت</option>`).join('')}
                         </select>
                     </div>
                     <div class="flex-1">
